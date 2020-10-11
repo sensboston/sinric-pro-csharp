@@ -1,5 +1,5 @@
-﻿using System.Threading;
-using LightExample;
+﻿using System.Collections.Generic;
+using System.Threading;
 
 namespace Sinric
 {
@@ -13,10 +13,15 @@ namespace Sinric
 
         // for identifying a specific device in the account
         private static string DeviceId = "your device id";
-
+        
         static void Main(string[] args)
         {
-            var client = new SinricClient(AppKey, SecretKey, DeviceId);
+
+
+            var devices = new List<SinricDevice>();
+            devices.Add(new SinricDevice() {DeviceId = DeviceId});
+
+            var client = new SinricClient(AppKey, SecretKey, devices);
 
             client.Start();
 

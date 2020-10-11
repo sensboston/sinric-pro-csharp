@@ -1,15 +1,17 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Sinric.json;
 using SuperSocket.ClientEngine;
 using WebSocket4Net;
 
-namespace LightExample
+namespace Sinric
 {
-    class SinricClient
+    public class SinricClient
     {
         //private const string SinricAddress = "ws://iot.sinric.com";
         private const string SinricAddress = "ws://ws.sinric.pro";
@@ -21,15 +23,17 @@ namespace LightExample
 
         public ConcurrentQueue<SinricMessage> IncomingMessages { get; } = new ConcurrentQueue<SinricMessage>();
 
-        public SinricClient(string apiKey, string secretKey, string deviceId)
+        public SinricClient(string apiKey, string secretKey, IEnumerable<SinricDevice> devices)
         {
             SecretKey = secretKey;
+            
+            var deviceIds = devices.Select(d => d.DeviceId);
 
             var headers = new List<KeyValuePair<string, string>>
             {
                 //new KeyValuePair<string, string>("Authorization", ("apikey:" + apiKey).Base64Encode())
                 new KeyValuePair<string, string>("appkey", apiKey),
-                new KeyValuePair<string, string>("deviceids", deviceId),
+                new KeyValuePair<string, string>("deviceids", string.Join(';', deviceIds)),
                 new KeyValuePair<string, string>("platform", "csharp"),
                 new KeyValuePair<string, string>("restoredevicestates", "true"),
             };
@@ -44,7 +48,6 @@ namespace LightExample
             WebSocket.Error += WebSocketOnError;
             WebSocket.Closed += WebSocketOnClosed;
             WebSocket.MessageReceived += WebSocketOnMessageReceived;
-
         }
 
         public void Start()
@@ -137,23 +140,13 @@ namespace LightExample
 
             try
             {
-                var obj = JsonConvert.DeserializeObject<SinricMessage>(e.Message);
-                var payloadString = obj.RawPayload?.Value as string;
+                var message = JsonConvert.DeserializeObject<SinricMessage>(e.Message);
 
-                if (!string.IsNullOrEmpty(payloadString))
-                {
-                    // if the message contains a payload then we need to validate its signature
-
-                    // compute a local signature from the raw payload using our secret key:
-                    var signature = Utility.Signature(payloadString, SecretKey);
-
-                    // compare the locally computed signature with the one supplied in the message:
-                    if (signature != obj.Signature.Hmac)
-                        throw new Exception("Computed signature for the payload does not match the signature supplied in the message. Message may have been tampered with.");
-                }
+                if (!Utility.ValidateSignature(message, SecretKey))
+                    throw new Exception("Computed signature for the payload does not match the signature supplied in the message. Message may have been tampered with.");
 
                 // add to the incoming message queue. caller will retrieve the messages on their own thread
-                IncomingMessages.Enqueue(obj);
+                IncomingMessages.Enqueue(message);
             }
             catch (Exception ex)
             {
@@ -180,4 +173,5 @@ namespace LightExample
         }
 
     }
+
 }
