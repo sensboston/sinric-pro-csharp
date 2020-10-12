@@ -1,25 +1,31 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
+using Sinric.Devices;
 
 namespace Sinric
 {
     class Program
     {
         // identifies the account
-        private static string AppKey = "your app key";
+        private static string AppKey { get; set; } = "your app key";
 
         // for validating messages sent to and from sinric
-        private static string SecretKey = "your secret key";
+        private static string SecretKey { get; set; } = "your secret key";
 
         // for identifying a specific device in the account
-        private static string DeviceId = "your device id";
-        
-        static void Main(string[] args)
+        private static string DeviceId { get; set; } = "your device id";
+
+        public static void Main(string[] args)
         {
 
 
-            var devices = new List<SinricDevice>();
-            devices.Add(new SinricDevice() {DeviceId = DeviceId});
+            var devices = new List<SinricDeviceBase>
+            {
+                new SinricSmartLock()
+                {
+                    DeviceId = DeviceId
+                }
+            };
 
             var client = new SinricClient(AppKey, SecretKey, devices);
 
@@ -27,21 +33,9 @@ namespace Sinric
 
             while (true)
             {
-                if (client.IncomingMessages.TryDequeue(out var message))
-                {
-                    if (message.Payload != null)
-                    {
-                        var state = message.Payload.GetValue<string>("state");
+                client.ProcessNewMessages();
 
-                        var reply = message.CreateReply(true);
-                        reply.Payload.SetValue("state", state.ToUpper() + "ED");
-
-                        client.SendMessage(reply);
-                    }
-
-                }
-                else
-                    Thread.Sleep(100);
+                Thread.Sleep(100);
             }
 
             // example runs perpetually

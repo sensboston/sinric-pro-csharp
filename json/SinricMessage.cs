@@ -6,29 +6,8 @@ using Newtonsoft.Json.Linq;
 
 namespace Sinric.json
 {
-    public class SinricMessage
+    internal class SinricMessage
     {
-        public SinricMessage CreateReply(bool result)
-        {
-            var reply = new SinricMessage
-            {
-                TimestampUtc = DateTime.UtcNow,
-                Payload =
-                {
-                    DeviceId = Payload.DeviceId,
-                    ReplyToken = Payload.ReplyToken,
-                    Type = "response",
-                    Message = "OK",
-                    Success = result,
-                    ClientId = "csharp",
-                    CreatedAtUtc = DateTime.UtcNow,
-                    Action = Payload.Action,
-                }
-            };
-
-            return reply;
-        }
-
         [JsonProperty("timestamp")]
         public uint Timestamp { get; set; }
 

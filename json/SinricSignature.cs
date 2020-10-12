@@ -2,7 +2,7 @@
 
 namespace Sinric.json
 {
-    public class SinricSignature
+    internal class SinricSignature
     {
         [JsonProperty("HMAC")]
         public string Hmac { get; set; }

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Sinric.Devices;
 using Sinric.json;
 using SuperSocket.ClientEngine;
 using WebSocket4Net;
@@ -21,11 +22,13 @@ namespace Sinric
         private Thread MainLoop { get; set; }
         private bool Running { get; set; }
 
-        public ConcurrentQueue<SinricMessage> IncomingMessages { get; } = new ConcurrentQueue<SinricMessage>();
+        private ConcurrentQueue<SinricMessage> IncomingMessages { get; } = new ConcurrentQueue<SinricMessage>();
+        private ICollection<SinricDeviceBase> Devices { get; set; }
 
-        public SinricClient(string apiKey, string secretKey, IEnumerable<SinricDevice> devices)
+        public SinricClient(string apiKey, string secretKey, ICollection<SinricDeviceBase> devices)
         {
             SecretKey = secretKey;
+            Devices = devices;
             
             var deviceIds = devices.Select(d => d.DeviceId);
 
@@ -119,7 +122,7 @@ namespace Sinric
             Running = false;
         }
 
-        public void SendMessage(SinricMessage message)
+        internal void SendMessage(SinricMessage message)
         {
             var payloadJson = JsonConvert.SerializeObject(message.Payload);
             message.RawPayload = new JRaw(payloadJson);
@@ -142,7 +145,7 @@ namespace Sinric
             {
                 var message = JsonConvert.DeserializeObject<SinricMessage>(e.Message);
 
-                if (!Utility.ValidateSignature(message, SecretKey))
+                if (!Utility.ValidateMessageSignature(message, SecretKey))
                     throw new Exception("Computed signature for the payload does not match the signature supplied in the message. Message may have been tampered with.");
 
                 // add to the incoming message queue. caller will retrieve the messages on their own thread
@@ -172,6 +175,26 @@ namespace Sinric
                 WebSocket.Close();
         }
 
+        /// <summary>
+        /// Called from the main thread
+        /// </summary>
+        public void ProcessNewMessages()
+        {
+            while (IncomingMessages.TryDequeue(out var message))
+            {
+                if (message.Payload != null)
+                {
+                    var device = Devices.FirstOrDefault(d => d.DeviceId == message.Payload.DeviceId);
+
+                    if (device == null)
+                        Console.WriteLine("Received message for unrecognized device:\n" + message.Payload.DeviceId);
+                    else
+                        device.ProcessMessage(this, message);
+                }
+
+                Thread.Sleep(50);
+            }
+        }
     }
 
 }

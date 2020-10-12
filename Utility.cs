@@ -28,7 +28,7 @@ namespace Sinric
             return Convert.ToBase64String(hash);
         }
 
-        public static bool ValidateSignature(SinricMessage message, string secretKey)
+        internal static bool ValidateMessageSignature(SinricMessage message, string secretKey)
         {
             var payloadString = message.RawPayload?.Value as string;
 
@@ -46,6 +46,27 @@ namespace Sinric
             }
 
             return true;
+        }
+
+        internal static SinricMessage CreateReplyMessage(SinricMessage message, bool result)
+        {
+            var reply = new SinricMessage
+            {
+                TimestampUtc = DateTime.UtcNow,
+                Payload =
+                {
+                    DeviceId = message.Payload.DeviceId,
+                    ReplyToken = message.Payload.ReplyToken,
+                    Type = "response",
+                    Message = "OK",
+                    Success = result,
+                    ClientId = "csharp",
+                    CreatedAtUtc = DateTime.UtcNow,
+                    Action = message.Payload.Action,
+                }
+            };
+
+            return reply;
         }
     }
 }
