@@ -6,8 +6,18 @@ namespace SinricLibrary.Devices
 {
     public class SinricSmartLock : SinricDeviceBase
     {
+        public const string SmartLock = "SmartLock";
+        public const string LockedState = "Locked";
+        public const string UnlockedState = "Unlocked";
+
         public Action LockedAction;
         public Action UnlockedAction;
+
+        public override string DeviceType { get; protected set; } = SmartLock;
+
+        public SinricSmartLock(string deviceId) : base(deviceId)
+        {
+        }
 
         internal override void ProcessMessage(SinricClient client, SinricMessage message)
         {
@@ -17,12 +27,14 @@ namespace SinricLibrary.Devices
             switch (state)
             {
                 case "lock":
-                    reply.Payload.SetValue("state", "LOCKED");
+                    // reply with upper case "LOCKED"
+                    reply.Payload.SetValue("state", LockedState.ToUpper());
                     LockedAction?.Invoke();
                     break;
 
                 case "unlock":
-                    reply.Payload.SetValue("state", "UNLOCKED");
+                    // reply with upper case "UNLOCKED"
+                    reply.Payload.SetValue("state", UnlockedState.ToUpper());
                     UnlockedAction?.Invoke();
                     break;
 

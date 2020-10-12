@@ -18,7 +18,7 @@ namespace SinricLibrary
         //private const string SinricAddress = "ws://iot.sinric.com";
         public string SinricAddress { get; set; } = "ws://ws.sinric.pro";
         private string SecretKey { get; set; }
-        private WebSocket WebSocket { get; set; } 
+        private WebSocket WebSocket { get; set; }
         private Thread MainLoop { get; set; }
         private bool Running { get; set; }
 
@@ -30,7 +30,7 @@ namespace SinricLibrary
         {
             SecretKey = secretKey;
             Devices = devices;
-            
+
             var deviceIds = devices.Select(d => d.DeviceId);
 
             var headers = new List<KeyValuePair<string, string>>
@@ -44,10 +44,10 @@ namespace SinricLibrary
 
             WebSocket = new WebSocket(SinricAddress, customHeaderItems: headers)
             {
-                EnableAutoSendPing = true, 
+                EnableAutoSendPing = true,
                 AutoSendPingInterval = 60,
             };
-            
+
             WebSocket.Opened += WebSocketOnOpened;
             WebSocket.Error += WebSocketOnError;
             WebSocket.Closed += WebSocketOnClosed;
@@ -85,7 +85,7 @@ namespace SinricLibrary
                 {
                     Thread.Sleep(100);
                 }
-                
+
                 if (WebSocket.State == WebSocketState.Open)
                     WebSocket.Close();
             }
@@ -111,7 +111,7 @@ namespace SinricLibrary
                             SendMessage(message);
                             Thread.Sleep(50);
                         }
-                        
+
                         break;
 
                     case WebSocketState.Closing:
@@ -161,7 +161,7 @@ namespace SinricLibrary
 
             // compute the signature using our secret key so that the service can verify authenticity
             message.Signature.Hmac = Utility.Signature(payloadJson, SecretKey);
-            
+
             OutgoingMessages.Enqueue(message);
             Debug.Print("Queued websocket message for sending");
         }
@@ -175,7 +175,8 @@ namespace SinricLibrary
                 var message = JsonConvert.DeserializeObject<SinricMessage>(e.Message);
 
                 if (!Utility.ValidateMessageSignature(message, SecretKey))
-                    throw new Exception("Computed signature for the payload does not match the signature supplied in the message. Message may have been tampered with.");
+                    throw new Exception(
+                        "Computed signature for the payload does not match the signature supplied in the message. Message may have been tampered with.");
 
                 // add to the incoming message queue. caller will retrieve the messages on their own thread
                 IncomingMessages.Enqueue(message);
@@ -211,7 +212,10 @@ namespace SinricLibrary
         {
             while (IncomingMessages.TryDequeue(out var message))
             {
-                if (message.Payload != null)
+                if (message.Payload == null) 
+                    continue;
+
+                try
                 {
                     var device = Devices.FirstOrDefault(d => d.DeviceId == message.Payload.DeviceId);
 
@@ -220,10 +224,13 @@ namespace SinricLibrary
                     else
                         device.ProcessMessage(this, message);
                 }
+                catch (Exception ex)
+                {
+                    Debug.Print($"SinricClient.ProcessNewMessages for device {message.Payload.DeviceId} exception: \n" + ex);
+                }
 
                 Thread.Sleep(50);
             }
         }
     }
-
 }
