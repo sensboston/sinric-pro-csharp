@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Security.Cryptography;
 using System.Text;
-using Sinric.json;
+using SinricLibrary.json;
 
-namespace Sinric
+namespace SinricLibrary
 {
     public static class Utility
     {

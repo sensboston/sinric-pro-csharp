@@ -5,12 +5,12 @@ using System.Linq;
 using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Sinric.Devices;
-using Sinric.json;
+using SinricLibrary.Devices;
+using SinricLibrary.json;
 using SuperSocket.ClientEngine;
 using WebSocket4Net;
 
-namespace Sinric
+namespace SinricLibrary
 {
     public class SinricClient
     {

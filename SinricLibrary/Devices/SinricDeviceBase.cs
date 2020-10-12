@@ -1,6 +1,6 @@
-﻿using Sinric.json;
+﻿using SinricLibrary.json;
 
-namespace Sinric.Devices
+namespace SinricLibrary.Devices
 {
     public abstract class SinricDeviceBase
     {

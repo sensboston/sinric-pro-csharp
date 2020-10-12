@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Sinric.json;
+using SinricLibrary.json;
 
-namespace Sinric.Devices
+namespace SinricLibrary.Devices
 {
     public class SinricSmartLock : SinricDeviceBase
     {

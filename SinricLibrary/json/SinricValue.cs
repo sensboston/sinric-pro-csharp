@@ -2,7 +2,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Sinric.json
+namespace SinricLibrary.json
 {
     internal class SinricValue
     {

@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace Sinric.json
+namespace SinricLibrary.json
 {
     internal class SinricSignature
     {

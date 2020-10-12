@@ -1,8 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
-using Sinric.Devices;
+using SinricLibrary;
+using SinricLibrary.Devices;
 
-namespace Sinric
+namespace ConsoleExampleCore
 {
     class Program
     {
@@ -17,7 +18,6 @@ namespace Sinric
 
         public static void Main(string[] args)
         {
-
 
             var devices = new List<SinricDeviceBase>
             {
