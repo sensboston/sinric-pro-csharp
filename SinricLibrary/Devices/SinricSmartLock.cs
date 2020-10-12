@@ -7,11 +7,13 @@ namespace SinricLibrary.Devices
     public class SinricSmartLock : SinricDeviceBase
     {
         public const string SmartLock = "SmartLock";
-        public const string LockedState = "Locked";
-        public const string UnlockedState = "Unlocked";
+        public const string Locked = "Locked";
+        public const string Unlocked = "Unlocked";
 
-        public Action LockedAction;
-        public Action UnlockedAction;
+        public Func<bool> LockedAction;
+        public Func<bool> UnlockedAction;
+
+        public string CurrentState { get; private set; }
 
         public override string DeviceType { get; protected set; } = SmartLock;
 
@@ -22,28 +24,37 @@ namespace SinricLibrary.Devices
         internal override void ProcessMessage(SinricClient client, SinricMessage message)
         {
             var reply = Utility.CreateReplyMessage(message, true);
-            var state = message.Payload.GetValue<string>("state");
+            var requestedState = message.Payload.GetValue<string>("state");
+            var newState = CurrentState;
 
-            switch (state)
+            switch (requestedState)
             {
                 case "lock":
                     // reply with upper case "LOCKED"
-                    reply.Payload.SetValue("state", LockedState.ToUpper());
-                    LockedAction?.Invoke();
+                    newState = Locked;
+                    reply.Payload.Success = LockedAction?.Invoke() ?? true;
+                   
                     break;
 
                 case "unlock":
                     // reply with upper case "UNLOCKED"
-                    reply.Payload.SetValue("state", UnlockedState.ToUpper());
-                    UnlockedAction?.Invoke();
+                    newState = Unlocked;
+                    reply.Payload.Success = UnlockedAction?.Invoke() ?? true;
+
                     break;
 
                 default:
-                    Debug.Print("SinricSmartLock received unrecognized state: " + state);
+                    Debug.Print("SinricSmartLock received unrecognized state: " + requestedState);
                     reply.Payload.Success = false;
                     break;
             }
 
+            if (reply.Payload.Success)
+            {
+                CurrentState = newState;
+            }
+
+            reply.Payload.SetValue("state", CurrentState.ToUpper());
             client.AddMessageToQueue(reply);
         }
 

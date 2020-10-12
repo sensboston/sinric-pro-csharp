@@ -23,8 +23,16 @@ namespace ConsoleExampleCore
 
             var smartLock = new SinricSmartLock(DeviceId)
             {
-                LockedAction = () => Console.WriteLine("Locked!"),
-                UnlockedAction = () => Console.WriteLine("Unlocked!")
+                LockedAction = () =>
+                {
+                    Console.WriteLine("Locked!");
+                    return true;
+                },
+                UnlockedAction = () =>
+                {
+                    Console.WriteLine("Unlocked!");
+                    return true;
+                }
             };
             
             SinricDeviceBase [] devices =
