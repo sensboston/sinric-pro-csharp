@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Newtonsoft.Json;
@@ -15,14 +16,14 @@ namespace SinricLibrary
     public class SinricClient
     {
         //private const string SinricAddress = "ws://iot.sinric.com";
-        private const string SinricAddress = "ws://ws.sinric.pro";
+        public string SinricAddress { get; set; } = "ws://ws.sinric.pro";
         private string SecretKey { get; set; }
-
         private WebSocket WebSocket { get; set; } 
         private Thread MainLoop { get; set; }
         private bool Running { get; set; }
 
         private ConcurrentQueue<SinricMessage> IncomingMessages { get; } = new ConcurrentQueue<SinricMessage>();
+        private ConcurrentQueue<SinricMessage> OutgoingMessages { get; } = new ConcurrentQueue<SinricMessage>();
         private ICollection<SinricDeviceBase> Devices { get; set; }
 
         public SinricClient(string apiKey, string secretKey, ICollection<SinricDeviceBase> devices)
@@ -57,7 +58,7 @@ namespace SinricLibrary
         {
             if (MainLoop == null)
             {
-                Console.WriteLine("SinricClient is starting");
+                Debug.Print("SinricClient is starting");
 
                 Running = true;
                 MainLoop = new Thread(MainLoopThread);
@@ -65,7 +66,7 @@ namespace SinricLibrary
             }
             else
             {
-                Console.WriteLine("SinricClient is already running");
+                Debug.Print("SinricClient is already running");
             }
         }
 
@@ -73,11 +74,11 @@ namespace SinricLibrary
         {
             if (MainLoop == null)
             {
-                Console.WriteLine("SinricClient is already stopped");
+                Debug.Print("SinricClient is already stopped");
             }
             else
             {
-                Console.WriteLine("SinricClient is stopping");
+                Debug.Print("SinricClient is stopping");
 
                 Running = false;
                 while (MainLoop != null)
@@ -94,23 +95,31 @@ namespace SinricLibrary
         {
             while (Running)
             {
+                // handle connection state changes if needed
                 switch (WebSocket.State)
                 {
                     case WebSocketState.Closed:
                     case WebSocketState.None:
                         WebSocket.OpenAsync();
-                        Console.WriteLine($"Websocket connecting to {SinricAddress}");
+                        Debug.Print($"Websocket connecting to {SinricAddress}");
                         break;
 
                     case WebSocketState.Open:
+                        // send any outgoing queued messages
+                        while (OutgoingMessages.TryDequeue(out var message))
+                        {
+                            SendMessage(message);
+                            Thread.Sleep(50);
+                        }
+                        
                         break;
 
                     case WebSocketState.Closing:
-                        Console.WriteLine("Websocket is closing ...");
+                        Debug.Print("Websocket is closing ...");
                         break;
 
                     case WebSocketState.Connecting:
-                        Console.WriteLine("Websocket is connecting ...");
+                        Debug.Print("Websocket is connecting ...");
                         break;
                 }
 
@@ -122,7 +131,30 @@ namespace SinricLibrary
             Running = false;
         }
 
-        internal void SendMessage(SinricMessage message)
+        /// <summary>
+        /// Send message immediately
+        /// </summary>
+        /// <param name="message"></param>
+        private void SendMessage(SinricMessage message)
+        {
+            try
+            {
+                // serialize the message to json
+                var json = JsonConvert.SerializeObject(message);
+                WebSocket.Send(json);
+                Debug.Print("Websocket message sent:\n" + json + "\n");
+            }
+            catch (Exception ex)
+            {
+                Debug.Print("Websocket send exception: " + ex);
+            }
+        }
+
+        /// <summary>
+        /// Enqueue message thread safe
+        /// </summary>
+        /// <param name="message"></param>
+        internal void AddMessageToQueue(SinricMessage message)
         {
             var payloadJson = JsonConvert.SerializeObject(message.Payload);
             message.RawPayload = new JRaw(payloadJson);
@@ -130,16 +162,13 @@ namespace SinricLibrary
             // compute the signature using our secret key so that the service can verify authenticity
             message.Signature.Hmac = Utility.Signature(payloadJson, SecretKey);
             
-            // serialize the message to json
-            var json = JsonConvert.SerializeObject(message);
-
-            WebSocket.Send(json);
-            Console.WriteLine("Websocket message sent:\n" + json + "\n");
+            OutgoingMessages.Enqueue(message);
+            Debug.Print("Queued websocket message for sending");
         }
 
         private void WebSocketOnMessageReceived(object sender, MessageReceivedEventArgs e)
         {
-            Console.WriteLine("Websocket message received:\n" + e.Message + "\n");
+            Debug.Print("Websocket message received:\n" + e.Message + "\n");
 
             try
             {
@@ -153,23 +182,23 @@ namespace SinricLibrary
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error processing message from Sinric:\n" + ex + "\n");
+                Debug.Print("Error processing message from Sinric:\n" + ex + "\n");
             }
         }
 
         private void WebSocketOnClosed(object sender, EventArgs e)
         {
-            Console.WriteLine("Websocket connection closed");
+            Debug.Print("Websocket connection closed");
         }
 
         private void WebSocketOnOpened(object sender, EventArgs e)
         {
-            Console.WriteLine("Websocket connection opened");
+            Debug.Print("Websocket connection opened");
         }
 
         private void WebSocketOnError(object sender, ErrorEventArgs e)
         {
-            Console.WriteLine("Websocket connection error:\n" + e.Exception + "\n");
+            Debug.Print("Websocket connection error:\n" + e.Exception + "\n");
 
             if (WebSocket.State == WebSocketState.Open)
                 WebSocket.Close();
@@ -187,7 +216,7 @@ namespace SinricLibrary
                     var device = Devices.FirstOrDefault(d => d.DeviceId == message.Payload.DeviceId);
 
                     if (device == null)
-                        Console.WriteLine("Received message for unrecognized device:\n" + message.Payload.DeviceId);
+                        Debug.Print("Received message for unrecognized device:\n" + message.Payload.DeviceId);
                     else
                         device.ProcessMessage(this, message);
                 }

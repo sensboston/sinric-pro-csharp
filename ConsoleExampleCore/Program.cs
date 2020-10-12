@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading;
 using SinricLibrary;
 using SinricLibrary.Devices;
@@ -19,12 +21,16 @@ namespace ConsoleExampleCore
         public static void Main(string[] args)
         {
 
+            var smartLock = new SinricSmartLock()
+            {
+                DeviceId = DeviceId,
+                LockedAction = () => Console.WriteLine("Locked!"),
+                UnlockedAction = () => Console.WriteLine("Unlocked!")
+            };
+            
             var devices = new List<SinricDeviceBase>
             {
-                new SinricSmartLock()
-                {
-                    DeviceId = DeviceId
-                }
+                smartLock
             };
 
             var client = new SinricClient(AppKey, SecretKey, devices);
