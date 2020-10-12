@@ -4,7 +4,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Sinric.json
 {
-    public class SinrecValue
+    public class SinricValue
     {
         // misc fields
         [JsonExtensionData]

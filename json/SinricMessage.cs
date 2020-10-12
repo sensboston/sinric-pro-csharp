@@ -44,7 +44,7 @@ namespace Sinric.json
         public IDictionary<string, JToken> Fields { get; set; } = new Dictionary<string, JToken>();
 
         [JsonProperty("header")]
-        public SinrecHeader Header { get; set; } = new SinrecHeader();
+        public SinricHeader Header { get; set; } = new SinricHeader();
 
         // Raw payload needed for computing signature
         [JsonProperty("payload")]
@@ -52,16 +52,16 @@ namespace Sinric.json
 
         // Deserialized version of payload
         [JsonIgnore]
-        public SinrecPayload Payload { get; set; } = new SinrecPayload();
+        public SinricPayload Payload { get; set; } = new SinricPayload();
 
         [OnDeserialized]
         private void OnDeserializedMethod(StreamingContext context)
         {
-            Payload = JsonConvert.DeserializeObject<SinrecPayload>(RawPayload?.Value as string ?? "");
+            Payload = JsonConvert.DeserializeObject<SinricPayload>(RawPayload?.Value as string ?? "");
         }
 
         [JsonProperty("signature")]
-        public SinrecSignature Signature { get; set; } = new SinrecSignature();
+        public SinricSignature Signature { get; set; } = new SinricSignature();
 
     }
 }

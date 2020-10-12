@@ -150,7 +150,7 @@ namespace Sinric
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error processing message from sinrec:\n" + ex + "\n");
+                Console.WriteLine("Error processing message from Sinric:\n" + ex + "\n");
             }
         }
 

@@ -2,7 +2,7 @@
 
 namespace Sinric.json
 {
-    public class SinrecHeader
+    public class SinricHeader
     {
         [JsonProperty("payloadVersion")]
         public int PayloadVersion { get; set; } = 2;

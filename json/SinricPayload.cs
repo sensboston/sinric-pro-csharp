@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Sinric.json
 {
-    public class SinrecPayload
+    public class SinricPayload
     {
         [JsonProperty("type")]
         public string Type { get; set; }
@@ -36,7 +36,7 @@ namespace Sinric.json
         public string ReplyToken { get; set; }
 
         [JsonProperty("value")]
-        public SinrecValue Value { get; set; } = new SinrecValue();
+        public SinricValue Value { get; set; } = new SinricValue();
 
         [JsonProperty("message")]
         public string Message { get; set; }
