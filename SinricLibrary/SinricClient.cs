@@ -15,7 +15,6 @@ namespace SinricLibrary
 {
     public class SinricClient
     {
-        //private const string SinricAddress = "ws://iot.sinric.com";
         public string SinricAddress { get; set; } = "ws://ws.sinric.pro";
         private string SecretKey { get; set; }
         private WebSocket WebSocket { get; set; }

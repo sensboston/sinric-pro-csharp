@@ -13,6 +13,19 @@ The included example (so far) simulates a smart lock with 2-way communication.
 
 This is useful for setting off Alexa routines, or commanding your PC to perform spoken actions from anywhere in the world...
 
+## Getting started
+First, you will need a valid Sinric account. Create a fake 'Smart Lock' device in the Sinric Dashboard.
+
+Next, you will need to copy appsettings.json to appsettings.private.json
+* Set the build action: 'Content', copy to output directory: 'Copy if newer'
+
+Follow the instructions to link the Sinric smart skill to your Alexa account.
+Go into your Alexa app and perform 'Discover Devices' -- then you can create routines using the fake Smart Lock.
+
+To see something happen, open the Sinric dashboard and click 'Lock' or 'Unlock'
+To set off an event, uncomment one of the 'SetNewState' lines, or hook into some other event on your PC ...
+
+
 # Using Alexa with Python
 If Python is your thing, the official Sinric Github repo has plenty of examples here:
 https://github.com/sinricpro/python-sdk

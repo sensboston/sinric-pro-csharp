@@ -29,7 +29,10 @@ namespace ConsoleExampleCore
             // you can put your settings and devices directly in appsettings.json, or make an appsettings.private.json (and exclude from git)
             var devices = LoadDevices();
 
-            var client = new SinricClient(AppKey, SecretKey, devices);
+            var client = new SinricClient(AppKey, SecretKey, devices)
+            {
+                SinricAddress = Configuration["SinricAddress"]
+            };
 
             client.SmartLocks("DemoLock").LockedAction = () =>
             {
@@ -44,6 +47,16 @@ namespace ConsoleExampleCore
             };
 
             client.Start();
+
+            Console.WriteLine("First, you will need a valid Sinric account. Create a fake 'Smart Lock' device in the Sinric Dashboard.");
+            Console.WriteLine(); 
+            Console.WriteLine("Next, you will need to copy appsettings.json to appsettings.private.json");
+            Console.WriteLine("  Set the build action: 'Content', copy to output directory: 'Copy if newer'");
+            Console.WriteLine();
+            Console.WriteLine("Follow the instructions to link the Sinric smart skill to your Alexa account.");
+            Console.WriteLine("Go into your Alexa app and perform 'Discover Devices' -- then you can create routines using the fake Smart Lock."); 
+            Console.WriteLine("To see something happen, open the Sinric dashboard and click 'Lock' or 'Unlock'");
+            Console.WriteLine("To set off an event, uncomment one of the 'SetNewState' lines, or hook into some other event on your PC ...");
 
             //client.SmartLocks("DemoLock").SetNewState(SinricSmartLock.State.Jammed);
             //client.SmartLocks("DemoLock").SetNewState(SinricSmartLock.State.Locked);
