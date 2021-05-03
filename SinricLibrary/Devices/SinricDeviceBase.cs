@@ -8,12 +8,13 @@ namespace SinricLibrary.Devices
     {
         internal ConcurrentQueue<SinricMessage> OutgoingMessages { get; } = new ConcurrentQueue<SinricMessage>();
         public string DeviceId { get; private set; }
-        public abstract string DeviceType { get; protected set; }
-
+        public abstract string Type { get; protected set; }
+        public string Name { get; set; }
         internal abstract void MessageReceived(SinricClient client, SinricMessage message, SinricMessage reply);
 
-        protected SinricDeviceBase(string deviceId)
+        protected SinricDeviceBase(string name, string deviceId)
         {
+            Name = name;
             DeviceId = deviceId;
         }
         

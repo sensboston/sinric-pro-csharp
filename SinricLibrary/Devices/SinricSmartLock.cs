@@ -37,9 +37,9 @@ namespace SinricLibrary.Devices
 
         public string CurrentState { get; private set; }
 
-        public override string DeviceType { get; protected set; } = "SmartLock";
+        public override string Type { get; protected set; } = SinricDeviceTypes.SmartLock;
 
-        public SinricSmartLock(string deviceId) : base(deviceId)
+        public SinricSmartLock(string name, string deviceId) : base(name, deviceId)
         {
         }
 

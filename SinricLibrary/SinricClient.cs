@@ -24,12 +24,18 @@ namespace SinricLibrary
 
         private ConcurrentQueue<SinricMessage> IncomingMessages { get; } = new ConcurrentQueue<SinricMessage>();
         private ConcurrentQueue<SinricMessage> OutgoingMessages { get; } = new ConcurrentQueue<SinricMessage>();
-        private ICollection<SinricDeviceBase> Devices { get; set; }
+        private Dictionary<string, SinricDeviceBase> Devices { get; set; } = new Dictionary<string, SinricDeviceBase>(StringComparer.OrdinalIgnoreCase);
+        public SinricSmartLock SmartLocks(string name) => (SinricSmartLock)Devices[name];
 
         public SinricClient(string apiKey, string secretKey, ICollection<SinricDeviceBase> devices)
         {
             SecretKey = secretKey;
-            Devices = devices;
+            
+            foreach (var device in devices)
+            {
+                // copy to private member
+                Devices.Add(device.Name, device);
+            }
 
             var deviceIds = devices.Select(d => d.DeviceId);
 
@@ -220,7 +226,7 @@ namespace SinricLibrary
 
                 try
                 {
-                    var device = Devices.FirstOrDefault(d => d.DeviceId == message.Payload.DeviceId);
+                    var device = Devices.Values.FirstOrDefault(d => d.DeviceId == message.Payload.DeviceId);
 
                     if (device == null)
                         Debug.Print("Received message for unrecognized device:\n" + message.Payload.DeviceId);
@@ -250,7 +256,7 @@ namespace SinricLibrary
         /// </summary>
         public void SignAndQueueOutgoingMessages()
         {
-            foreach (var device in Devices)
+            foreach (var device in Devices.Values)
             {
                 // take messages off the device queues
                 while (device.OutgoingMessages.TryDequeue(out var message))
