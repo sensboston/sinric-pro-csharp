@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -44,9 +44,13 @@ namespace ConsoleExampleCore
 
             client.Start();
 
+            //smartLock.SetNewState(SinricSmartLock.State.Jammed);
+            //smartLock.SetNewState(SinricSmartLock.State.Locked);
+            //smartLock.SetNewState(SinricSmartLock.State.Unlocked);
+
             while (true)
             {
-                client.ProcessNewMessages();
+                client.ProcessIncomingMessages();
 
                 Thread.Sleep(100);
             }

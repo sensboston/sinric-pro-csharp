@@ -105,6 +105,9 @@ namespace SinricLibrary
                         break;
 
                     case WebSocketState.Open:
+                        // check devices for new outgoing messages
+                        SignAndQueueOutgoingMessages();
+
                         // send any outgoing queued messages
                         while (OutgoingMessages.TryDequeue(out var message))
                         {
@@ -160,7 +163,7 @@ namespace SinricLibrary
             message.RawPayload = new JRaw(payloadJson);
 
             // compute the signature using our secret key so that the service can verify authenticity
-            message.Signature.Hmac = Utility.Signature(payloadJson, SecretKey);
+            message.Signature.Hmac = HmacSignature.Signature(payloadJson, SecretKey);
 
             OutgoingMessages.Enqueue(message);
             Debug.Print("Queued websocket message for sending");
@@ -174,7 +177,7 @@ namespace SinricLibrary
             {
                 var message = JsonConvert.DeserializeObject<SinricMessage>(e.Message);
 
-                if (!Utility.ValidateMessageSignature(message, SecretKey))
+                if (!HmacSignature.ValidateMessageSignature(message, SecretKey))
                     throw new Exception(
                         "Computed signature for the payload does not match the signature supplied in the message. Message may have been tampered with.");
 
@@ -208,7 +211,7 @@ namespace SinricLibrary
         /// <summary>
         /// Called from the main thread
         /// </summary>
-        public void ProcessNewMessages()
+        public void ProcessIncomingMessages()
         {
             while (IncomingMessages.TryDequeue(out var message))
             {
@@ -222,7 +225,16 @@ namespace SinricLibrary
                     if (device == null)
                         Debug.Print("Received message for unrecognized device:\n" + message.Payload.DeviceId);
                     else
-                        device.ProcessMessage(this, message);
+                    {
+                        // pass in a pre-generated reply, default to fail
+                        var reply = CreateReplyMessage(message, SinricPayload.Result.Fail);
+
+                        // client will take an action and update the reply
+                        device.MessageReceived(this, message, reply);
+
+                        // send the reply to the server
+                        AddMessageToQueue(reply);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -231,6 +243,49 @@ namespace SinricLibrary
 
                 Thread.Sleep(50);
             }
+        }
+
+        /// <summary>
+        /// Called from the main thread
+        /// </summary>
+        public void SignAndQueueOutgoingMessages()
+        {
+            foreach (var device in Devices)
+            {
+                // take messages off the device queues
+                while (device.OutgoingMessages.TryDequeue(out var message))
+                {
+                    // sign them, and add to the outgoing queue for processing
+                    AddMessageToQueue(message);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Given a message, creates a valid response with predetermined defaults filled in.
+        /// The caller must add remaining info & sign the message for it to be valid.
+        /// </summary>
+        /// <param name="message">The message being replied to</param>
+        /// <param name="result"></param>
+        /// <returns>A newly generated message containing the reply details will be returned</returns>
+        internal static SinricMessage CreateReplyMessage(SinricMessage message, bool result = SinricPayload.Result.Fail)
+        {
+            var reply = new SinricMessage
+            {
+                TimestampUtc = DateTime.UtcNow,
+                Payload =
+                {
+                    CreatedAtUtc = DateTime.UtcNow,
+                    Type = SinricPayload.MessageType.Response,
+                    Message = SinricPayload.Messages.Ok,
+                    DeviceId = message.Payload.DeviceId,
+                    ReplyToken = message.Payload.ReplyToken,
+                    Action = message.Payload.Action,
+                    Success = result,
+                }
+            };
+
+            return reply;
         }
     }
 }

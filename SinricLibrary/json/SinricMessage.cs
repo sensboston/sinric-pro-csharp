@@ -8,6 +8,7 @@ namespace SinricLibrary.json
 {
     internal class SinricMessage
     {
+
         [JsonProperty("timestamp")]
         public uint Timestamp { get; set; }
 
@@ -41,6 +42,5 @@ namespace SinricLibrary.json
 
         [JsonProperty("signature")]
         public SinricSignature Signature { get; set; } = new SinricSignature();
-
     }
 }

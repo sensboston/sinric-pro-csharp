@@ -4,9 +4,10 @@ using Newtonsoft.Json.Linq;
 
 namespace SinricLibrary.json
 {
-    internal class SinricValue
+    internal class SinricCause
     {
-        public const string State = "state";
+        public const string PhysicalInteraction = "PHYSICAL_INTERACTION";
+        public const string CauseType = "type";
 
         // misc fields
         [JsonExtensionData]
