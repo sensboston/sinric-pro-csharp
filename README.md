@@ -4,6 +4,7 @@ Ever wanted to use Alexa with C#? The Sinric Pro smart skill makes it easy.
 This project is a C# adaptation for communicating with the Sinric Pro service, implementing their API.
 
 Set up a Sinric Pro account here: https://sinric.pro/index.html
+
 See the full API documentation here: https://help.sinric.pro/
 
 The included example (so far) simulates a smart lock with 2-way communication.
