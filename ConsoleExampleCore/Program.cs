@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +24,7 @@ namespace ConsoleExampleCore
 
         public static void Main(string[] args)
         {
+
             Setup(args);
 
             AppKey = Configuration["AppKey"];
@@ -33,19 +37,7 @@ namespace ConsoleExampleCore
             {
                 SinricAddress = Configuration["SinricAddress"]
             };
-
-            client.SmartLocks("DemoLock").LockedAction = () =>
-            {
-                Console.WriteLine("Locked!");
-                return true;
-            };
-
-            client.SmartLocks("DemoLock").UnlockedAction = () =>
-            {
-                Console.WriteLine("Unlocked!");
-                return true;
-            };
-
+            
             client.Start();
 
             Console.WriteLine("First, you will need a valid Sinric account. Create a fake 'Smart Lock' device in the Sinric Dashboard.");
@@ -61,6 +53,40 @@ namespace ConsoleExampleCore
             //client.SmartLocks("DemoLock").SetNewState(SinricSmartLock.State.Jammed);
             //client.SmartLocks("DemoLock").SetNewState(SinricSmartLock.State.Locked);
             //client.SmartLocks("DemoLock").SetNewState(SinricSmartLock.State.Unlocked);
+            client.ContactSensors("Kitchen Door").SetHandler(StateEnums.PowerState.On, info =>
+            {
+                Debug.Print($"Power state for kitchen door changed to {info.NewState}");
+                info.Device.SendNewState(StateEnums.ContactState.Open);
+            });
+
+            client.ContactSensors("Kitchen Door").SetHandler(StateEnums.PowerState.Off, info =>
+            {
+                Debug.Print($"Power state for kitchen door changed to {info.NewState}");
+                info.Device.SendNewState(StateEnums.ContactState.Closed);
+            });
+
+            client.SmartLocks("DemoLock").SetHandler<StateEnums.LockState>(info =>
+            {
+                // fix / translate to proper state reply
+                if (info.NewState == "lock")
+                    info.NewState = SinricMessageAttribute.Get(StateEnums.LockState.Lock).SendValue;
+
+                if (info.NewState == "unlock")
+                    info.NewState = SinricMessageAttribute.Get(StateEnums.LockState.Unlock).SendValue;
+            });
+
+
+            client.SmartLocks("DemoLock").SetHandler(StateEnums.LockState.Lock, info =>
+            {
+                Debug.Print($"Better lock your doors!");
+            });
+
+            client.SmartLocks("DemoLock").SetHandler(StateEnums.LockState.Unlock, info =>
+            {
+                Debug.Print($"Unlocked!");
+            });
+
+            client.SmartLocks("DemoLock").SendNewState(StateEnums.LockState.Lock);
 
             while (true)
             {
@@ -84,6 +110,10 @@ namespace ConsoleExampleCore
                     case SinricDeviceTypes.SmartLock:
 
                         devices.Add(new SinricSmartLock(entry.Name, entry.DeviceId));
+                        break;
+
+                    case SinricDeviceTypes.ContactSensor:
+                        devices.Add(new SinricContactSensor(entry.Name, entry.DeviceId));
                         break;
 
                     default:

@@ -91,6 +91,11 @@ namespace SinricLibrary.json
             return this;
         }
 
+        public void SetState(string newState)
+        {
+            SetValue(SinricValue.State, newState);
+        }
+
         [JsonProperty("cause")]
         public SinricCause Cause { get; set; } = new SinricCause();
 

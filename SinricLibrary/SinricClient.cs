@@ -25,6 +25,7 @@ namespace SinricLibrary
         private ConcurrentQueue<SinricMessage> OutgoingMessages { get; } = new ConcurrentQueue<SinricMessage>();
         private Dictionary<string, SinricDeviceBase> Devices { get; set; } = new Dictionary<string, SinricDeviceBase>(StringComparer.OrdinalIgnoreCase);
         public SinricSmartLock SmartLocks(string name) => (SinricSmartLock)Devices[name];
+        public SinricContactSensor ContactSensors(string name) => (SinricContactSensor)Devices[name];
 
         public SinricClient(string apiKey, string secretKey, ICollection<SinricDeviceBase> devices)
         {
@@ -235,7 +236,7 @@ namespace SinricLibrary
                         var reply = CreateReplyMessage(message, SinricPayload.Result.Fail);
 
                         // client will take an action and update the reply
-                        device.MessageReceived(this, message, reply);
+                        device.MessageReceived(message, reply);
 
                         // send the reply to the server
                         AddMessageToQueue(reply);
