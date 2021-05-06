@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using SinricLibrary.json;
 
 namespace SinricLibrary.Devices
@@ -10,25 +11,25 @@ namespace SinricLibrary.Devices
     public abstract class SinricDeviceBase
     {
         internal ConcurrentQueue<SinricMessage> OutgoingMessages { get; } = new ConcurrentQueue<SinricMessage>();
+        public string Name { get; set; }
         public string DeviceId { get; private set; }
         public abstract string Type { get; protected set; }
         internal Dictionary<string, string> BasicState { get; set; } = new Dictionary<string, string>();
 
-        internal Dictionary<string, Action<BasicStateChangeInfo>> Handlers = new Dictionary<string, Action<BasicStateChangeInfo>>();
+        internal Dictionary<string, object> Handlers = new Dictionary<string, object>();
 
-        public void SetHandler<T>(Action<BasicStateChangeInfo> actionDelegate)
+        public void SetHandler<T>(Action<BasicStateChangeInfo<T>> actionDelegate)
         {
             var actionVerb = SinricActionAttribute.GetActionVerb(typeof(T));
             Handlers[actionVerb] = actionDelegate;
         }
 
-        public void SetHandler<T>(T conditionState, Action<BasicStateChangeInfo> actionDelegate)
+        public void SetHandler<T>(T conditionState, Action<BasicStateChangeInfo<T>> actionDelegate)
         {
             var actionVerb = SinricActionAttribute.GetActionVerb(typeof(T));
             Handlers[actionVerb + ":" + SinricMessageAttribute.Get(conditionState).ReceiveValue] = actionDelegate;
         }
-
-        public string Name { get; set; }
+        
 
         /// <summary>
         /// For a given Sinric action (ie. setLockState or setContactState), references an enum of the available values for those states.
@@ -60,35 +61,54 @@ namespace SinricLibrary.Devices
             Debug.Print($"Sensor {Name} of type {Type} received action: {message.Payload.Action}");
 
             // what action is being requested?
-            ActionStateEnums.TryGetValue(message.Payload.Action, out var actionStateEnum);
-            BasicState.TryGetValue(message.Payload.Action, out var currentState);
-
-            // state that the server is trying to set:
-            var newState = message.Payload.GetValue<string>(SinricValue.State);
+            ActionStateEnums.TryGetValue(message.Payload.Action, out var enumType);
             
-            var basicStateChangeInfo = new BasicStateChangeInfo()
+            // handle a state change if a known/supported enum
+            if (enumType != null)
             {
-                Action = message.Payload.Action,
-                ActionType = actionStateEnum,
-                Device = this,
-                OldState = currentState,
-                NewState = newState,
-                Success = true
-            };
+                BasicState.TryGetValue(message.Payload.Action, out var currentState);
 
-            // check if general handler is registered. call the handler and return the result
-            Handlers.TryGetValue(message.Payload.Action, out var delegateFunc);
-            delegateFunc?.Invoke(basicStateChangeInfo);
+                // state that the server is trying to set:
+                var newState = message.Payload.GetValue<string>(SinricValue.State);
 
-            // check if conditional handler is registered. call the handler and return the result
-            Handlers.TryGetValue(message.Payload.Action + ":" + newState, out var delegateFuncConditional);
-            delegateFuncConditional?.Invoke(basicStateChangeInfo);
-            
-            // reply with the result
-            reply.Payload.SetState(basicStateChangeInfo.NewState);
-            reply.Payload.Success = basicStateChangeInfo.Success;
+                var genericType = typeof(BasicStateChangeInfo<>);
+                var boundType = genericType.MakeGenericType(enumType);
+                var basicStateChangeInfo = (BasicStateChangeInfo) Activator.CreateInstance(boundType);
 
-            Debug.Print($"Sensor {Name} of type {Type} reply was: {basicStateChangeInfo.NewState}, success: {basicStateChangeInfo.Success}");
+                //ActionType = actionStateEnum,
+                basicStateChangeInfo.Action = message.Payload.Action;
+                basicStateChangeInfo.Device = this;
+                basicStateChangeInfo.OldState = currentState;
+                basicStateChangeInfo.NewState = newState;
+                basicStateChangeInfo.Success = true;
+
+                // look up the enum value by the receive description attribute
+                var enumValues = Enum.GetValues(enumType).Cast<object>();
+                var enumValue = enumValues.FirstOrDefault(e => SinricMessageAttribute.Get(e)?.ReceiveValue == newState);
+
+                basicStateChangeInfo.ReceiveValue = newState;
+                basicStateChangeInfo.SendValue = SinricMessageAttribute.Get(enumValue).SendValue;
+
+                // set the basicStateChangeInfo<T>.NewStateEnum field
+                basicStateChangeInfo.GetType()
+                    .GetProperty("NewStateEnum", BindingFlags.Public | BindingFlags.Instance)
+                    ?.SetValue(basicStateChangeInfo, enumValue, null);
+
+                // check if general handler is registered. call the handler and return the result
+                Handlers.TryGetValue(message.Payload.Action, out var delegateFunc);
+                var method = delegateFunc?.GetType().GetMethod("Invoke");
+                method?.Invoke(delegateFunc, new object[] {basicStateChangeInfo});
+
+                // check if conditional handler is registered. call the handler and return the result
+                Handlers.TryGetValue(message.Payload.Action + ":" + newState, out var delegateFuncConditional);
+                method?.Invoke(delegateFuncConditional, new object[] {basicStateChangeInfo});
+
+                // reply with the result
+                reply.Payload.SetState(basicStateChangeInfo.SendValue);
+                reply.Payload.Success = basicStateChangeInfo.Success;
+
+                Debug.Print($"Sensor {Name} of type {Type} reply was: {basicStateChangeInfo.NewState}, success: {basicStateChangeInfo.Success}");
+            }
         }
 
         protected SinricDeviceBase(string name, string deviceId)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -24,7 +25,6 @@ namespace ConsoleExampleCore
 
         public static void Main(string[] args)
         {
-
             Setup(args);
 
             AppKey = Configuration["AppKey"];
@@ -50,42 +50,48 @@ namespace ConsoleExampleCore
             Console.WriteLine("To see something happen, open the Sinric dashboard and click 'Lock' or 'Unlock'");
             Console.WriteLine("To set off an event, uncomment one of the 'SetNewState' lines, or hook into some other event on your PC ...");
 
-            //client.SmartLocks("DemoLock").SetNewState(SinricSmartLock.State.Jammed);
-            //client.SmartLocks("DemoLock").SetNewState(SinricSmartLock.State.Locked);
-            //client.SmartLocks("DemoLock").SetNewState(SinricSmartLock.State.Unlocked);
+            
+            // specific value (on)
             client.ContactSensors("Kitchen Door").SetHandler(StateEnums.PowerState.On, info =>
             {
-                Debug.Print($"Power state for kitchen door changed to {info.NewState}");
-                info.Device.SendNewState(StateEnums.ContactState.Open);
+                Debug.Print($"Power state for {info.Device.Name} changed to {info.NewState}");
             });
 
+            // specific value (off)
             client.ContactSensors("Kitchen Door").SetHandler(StateEnums.PowerState.Off, info =>
             {
-                Debug.Print($"Power state for kitchen door changed to {info.NewState}");
-                info.Device.SendNewState(StateEnums.ContactState.Closed);
+                Debug.Print($"Power state for {info.Device.Name} changed to {info.NewState}");
             });
 
-            client.SmartLocks("DemoLock").SetHandler<StateEnums.LockState>(info =>
+            // handles any state (on or off)
+            client.ContactSensors("Kitchen Door").SetHandler<StateEnums.PowerState>(info =>
             {
-                // fix / translate to proper state reply
-                if (info.NewState == "lock")
-                    info.NewState = SinricMessageAttribute.Get(StateEnums.LockState.Lock).SendValue;
+                // string
+                Debug.Print($"{info.Device.Name} is now {info.NewState}");
 
-                if (info.NewState == "unlock")
-                    info.NewState = SinricMessageAttribute.Get(StateEnums.LockState.Unlock).SendValue;
+                // typed
+                Debug.Print($"{info.Device.Name} is now {info.NewStateEnum}");
             });
 
-
+            // requested to lock
             client.SmartLocks("DemoLock").SetHandler(StateEnums.LockState.Lock, info =>
             {
                 Debug.Print($"Better lock your doors!");
+
+                // defaults to true
+                // info.Success = true; 
             });
 
+            // requested to unlock
             client.SmartLocks("DemoLock").SetHandler(StateEnums.LockState.Unlock, info =>
             {
                 Debug.Print($"Unlocked!");
             });
 
+            // update contact to Open
+            client.ContactSensors("Kitchen Door").SendNewState(StateEnums.ContactState.Open);
+
+            // update lock status to locked
             client.SmartLocks("DemoLock").SendNewState(StateEnums.LockState.Lock);
 
             while (true)

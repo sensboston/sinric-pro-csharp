@@ -42,10 +42,10 @@ namespace SinricLibrary.Devices
             else
             {
                 // attribute for a member field
-                var fieldInfo = source.GetType().GetField(source.ToString());
-                var attributes = (SinricMessageAttribute[])fieldInfo.GetCustomAttributes(typeof(SinricMessageAttribute), false);
+                var fieldInfo = source?.GetType().GetField(source.ToString());
+                var attributes = (SinricMessageAttribute[])fieldInfo?.GetCustomAttributes(typeof(SinricMessageAttribute), false);
 
-                if (attributes.Length > 0)
+                if (attributes?.Length > 0)
                     return attributes[0];
             }
 
