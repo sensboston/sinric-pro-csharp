@@ -70,6 +70,8 @@ namespace SinricLibrary.Devices
 
                 // state that the server is trying to set:
                 var newState = message.Payload.GetValue<string>(SinricValue.State);
+                if (newState == null) newState = message.Payload.GetValue<string>(SinricValue.ThermostatMode);
+                if (newState == null) newState = message.Payload.GetValue<string>(SinricValue.Temperature);
 
                 var genericType = typeof(BasicStateChangeInfo<>);
                 var boundType = genericType.MakeGenericType(enumType);
@@ -84,10 +86,10 @@ namespace SinricLibrary.Devices
 
                 // look up the enum value by the receive description attribute
                 var enumValues = Enum.GetValues(enumType).Cast<object>();
-                var enumValue = enumValues.FirstOrDefault(e => SinricMessageAttribute.Get(e)?.ReceiveValue == newState);
-
+                var enumValue = enumValues.FirstOrDefault(e => (bool)(SinricMessageAttribute.Get(e)?.ReceiveValue.Equals(newState, StringComparison.OrdinalIgnoreCase)));
                 basicStateChangeInfo.ReceiveValue = newState;
-                basicStateChangeInfo.SendValue = SinricMessageAttribute.Get(enumValue).SendValue;
+                if (enumValue == null) basicStateChangeInfo.SendValue = newState;
+                else basicStateChangeInfo.SendValue = SinricMessageAttribute.Get(enumValue).SendValue;
 
                 // set the basicStateChangeInfo<T>.NewStateEnum field
                 basicStateChangeInfo.GetType()
@@ -101,7 +103,8 @@ namespace SinricLibrary.Devices
 
                 // check if conditional handler is registered. call the handler and return the result
                 Handlers.TryGetValue(message.Payload.Action + ":" + newState, out var delegateFuncConditional);
-                method?.Invoke(delegateFuncConditional, new object[] {basicStateChangeInfo});
+                if (delegateFuncConditional != null)
+                    method?.Invoke(delegateFuncConditional, new object[] {basicStateChangeInfo});
 
                 // reply with the result
                 reply.Payload.SetState(basicStateChangeInfo.SendValue);
@@ -184,7 +187,6 @@ namespace SinricLibrary.Devices
 
             return newState;
         }
-
 
         public string GetLocalState<T>()
         {

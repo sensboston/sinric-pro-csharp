@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Text;
 
 namespace SinricLibrary.Devices
 {
@@ -118,6 +115,27 @@ namespace SinricLibrary.Devices
 
             [SinricMessage(SendValue = "JAMMED")]
             Jammed
+        }
+
+        [SinricAction("setThermostatMode")]
+        public enum ThermostatModeState
+        {
+            [SinricMessage(ReceiveValue = "cool")]
+            Cool,
+
+            [SinricMessage(ReceiveValue = "heat")]
+            Heat,
+
+            [SinricMessage(ReceiveValue = "auto")]
+            Auto,
+
+            [SinricMessage(ReceiveValue = "off")]
+            Off
+        }
+
+        [SinricAction("targetTemperature")]
+        public enum TargetTemperatureState
+        {
         }
     }
 }

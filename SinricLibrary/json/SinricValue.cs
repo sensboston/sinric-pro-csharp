@@ -7,6 +7,8 @@ namespace SinricLibrary.json
     internal class SinricValue
     {
         public const string State = "state";
+        public const string ThermostatMode = "thermostatMode";
+        public const string Temperature = "temperature";
 
         // misc fields
         [JsonExtensionData]

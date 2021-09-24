@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SinricLibrary.Devices;
@@ -26,11 +27,12 @@ namespace SinricLibrary
         private Dictionary<string, SinricDeviceBase> Devices { get; set; } = new Dictionary<string, SinricDeviceBase>(StringComparer.OrdinalIgnoreCase);
         public SinricSmartLock SmartLocks(string name) => (SinricSmartLock)Devices[name];
         public SinricContactSensor ContactSensors(string name) => (SinricContactSensor)Devices[name];
+        public SinricThermostat Thermostats(string name) => (SinricThermostat)Devices[name];
 
         public SinricClient(string apiKey, string secretKey, ICollection<SinricDeviceBase> devices)
         {
             SecretKey = secretKey;
-            
+
             foreach (var device in devices)
             {
                 // copy to private member
@@ -221,7 +223,7 @@ namespace SinricLibrary
         {
             while (IncomingMessages.TryDequeue(out var message))
             {
-                if (message.Payload == null) 
+                if (message.Payload == null)
                     continue;
 
                 try
@@ -233,7 +235,7 @@ namespace SinricLibrary
                     else
                     {
                         // pass in a pre-generated reply, default to fail
-                        var reply = CreateReplyMessage(message, SinricPayload.Result.Fail);
+                        var reply = CreateReplyMessage(message, SinricPayload.Result.Success);
 
                         // client will take an action and update the reply
                         device.MessageReceived(message, reply);
@@ -274,7 +276,7 @@ namespace SinricLibrary
         /// <param name="message">The message being replied to</param>
         /// <param name="result"></param>
         /// <returns>A newly generated message containing the reply details will be returned</returns>
-        internal static SinricMessage CreateReplyMessage(SinricMessage message, bool result = SinricPayload.Result.Fail)
+        internal static SinricMessage CreateReplyMessage(SinricMessage message, bool result = SinricPayload.Result.Success)
         {
             var reply = new SinricMessage
             {
