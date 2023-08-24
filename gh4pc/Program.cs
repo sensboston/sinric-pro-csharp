@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Threading;
 using SinricLibrary;
@@ -25,12 +26,33 @@ namespace gh4pc
         const string DEVICE_NAME = "My PC";                     // Should be the same as thermostat device name on SinricPro dashboard
         const string SERVER_URL = "ws://ws.sinric.pro";
 
+        static SinricClient client;
+
         [STAThreadAttribute]
         static void Main()
         {
-            var devices = new List<SinricDeviceBase>();
-            devices.Add(new SinricThermostat(DEVICE_NAME, DEVICE_ID));
-            var client = new SinricClient(APP_KEY, APP_SECRET, devices) { SinricAddress = SERVER_URL };
+            NetworkChange.NetworkAddressChanged += (s, e) =>
+            {
+                client?.Stop();
+                client = null;  
+                ConnectToSinric();
+            };
+
+            ConnectToSinric();
+            while (true)
+            {
+                client?.ProcessIncomingMessages();
+                Thread.Sleep(500);
+            }
+        }
+
+        static void ConnectToSinric()
+        { 
+            var devices = new List<SinricDeviceBase>
+            {
+                new SinricThermostat(DEVICE_NAME, DEVICE_ID)
+            };
+            client = new SinricClient(APP_KEY, APP_SECRET, devices) { SinricAddress = SERVER_URL };
             client.Thermostats(DEVICE_NAME).SetHandler<StateEnums.TargetTemperatureState>(info =>
             {
                 // Play / pause
@@ -64,12 +86,6 @@ namespace gh4pc
 
             client.Start();
             client.Thermostats(DEVICE_NAME).SendNewState(StateEnums.PowerState.On);
-
-            while (true)
-            {
-                client.ProcessIncomingMessages();
-                Thread.Sleep(100);
-            }
         }
     }
 }
